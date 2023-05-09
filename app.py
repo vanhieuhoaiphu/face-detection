@@ -40,7 +40,7 @@ def generate_dataset(nbr):
         # scaling factor=1.3
         # Minimum neighbor = 5
 
-        if faces is ():
+        if faces == ():
             return None
         for x, y, w, h in faces:
             cropped_face = img[y : y + h, x : x + w]
@@ -162,7 +162,7 @@ def face_recognition():  # generate frame by frame from camera
                 mycursor.execute(
                     "select a.img_sv, b.sv_name, b.sv_class "
                     "  from img_dataset a "
-                    "  left join qlsv b on a.img_sv = b.mssv "
+                    "  left join student b on a.img_sv = b.mssv "
                     " where img_id = " + str(id)
                 )
                 row = mycursor.fetchone()
@@ -255,29 +255,29 @@ def face_recognition():  # generate frame by frame from camera
             break
 
 
-@app.route("/")
+@app.route("/student_page")
 def home():
-    mycursor.execute("select mssv, sv_name, sv_class from qlsv")
+    mycursor.execute("select mssv, sv_name, sv_class from student")
     data = mycursor.fetchall()
 
-    return render_template("index.html", data=data)
+    return render_template("student_page.html", data=data)
 
 
 @app.route("/sv", methods=["GET"])
 def sv():
-    mycursor.execute("select mssv, sv_name, sv_class from qlsv")
+    mycursor.execute("select mssv, sv_name, sv_class from student")
     data = mycursor.fetchall()
     return jsonify(response=data)
 
 
 @app.route("/addprsn")
 def addprsn():
-    mycursor.execute("select ifnull(max(mssv) + 0, 0)  from qlsv")
+    mycursor.execute("select ifnull(max(mssv) + 0, 0)  from student")
     row = mycursor.fetchone()
     nbr = row[0]
     # print(int(nbr))
 
-    return render_template("addprsn.html", newnbr=int(nbr))
+    return render_template("add_student_page.html", newnbr=int(nbr))
 
 
 @app.route("/addprsn_submit", methods=["POST"])
@@ -287,7 +287,7 @@ def addprsn_submit():
     classsv = request.form.get("class")
 
     mycursor.execute(
-        """INSERT INTO `qlsv` (`mssv`, `sv_name`, `sv_class`) VALUES
+        """INSERT INTO `student` (`mssv`, `sv_name`, `sv_class`) VALUES
                     ('{}', '{}', '{}')""".format(
             mssv, namesv, classsv
         )
@@ -295,12 +295,9 @@ def addprsn_submit():
     mydb.commit()
 
     # return redirect(url_for('home'))
-    return redirect(url_for("vfdataset_page", prs=mssv))
+    return redirect(url_for("gendataset_page", prs=mssv))
 
 
-@app.route("/vfdataset_page/<prs>")
-def vfdataset_page(prs):
-    return render_template("gendataset.html", prs=prs)
 
 
 @app.route("/vidfeed_dataset/<nbr>")
@@ -326,7 +323,7 @@ def fr_page():
     mycursor.execute(
         "select a.accs_id, a.accs_prsn, b.sv_name, b.sv_class, a.accs_added "
         "  from accs_hist a "
-        "  left join qlsv b on a.accs_prsn = b.mssv "
+        "  left join student b on a.accs_prsn = b.mssv "
         " where a.accs_date = curdate() "
         " order by 1 desc"
     )
@@ -361,7 +358,7 @@ def loadData():
     mycursor.execute(
         "select a.accs_id, a.accs_prsn, b.sv_name, b.sv_class, date_format(a.accs_added, '%H:%i:%s') "
         "  from accs_hist a "
-        " left join qlsv b on a.accs_prsn = b.mssv "
+        " left join student b on a.accs_prsn = b.mssv "
         " where a.accs_date = curdate() "
         " order by 1 desc"
     )
@@ -369,6 +366,65 @@ def loadData():
 
     return jsonify(response=data)
 
+@app.route("/gendataset_page/<prs>")
+def gendataset_page(prs):
+    return render_template("gendataset_page.html", prs=prs)
 
+@app.route("/add_class_module")
+def addclassmodule_page():
+    mycursor.execute(
+        "select * from class_module"
+    )
+    data = mycursor.fetchall()
+
+
+    return render_template("classmodule_page.html", classmodules = data)
+
+@app.route("/add_class_page")
+def add_class_page():
+    return render_template("add_class_page.html")
+
+@app.route("/class_module")
+def classmodule_page():
+    mycursor.execute(
+        "select * from class_module"
+    )
+    data = mycursor.fetchall()
+
+
+    return render_template("classmodule_page.html", classmodules = data)
+
+@app.route("/class_module_page/add", methods=["POST"])
+def addclassmodule():
+    try:
+        classmodule_name = request.form.get("classmodule_name")
+        lecture_name = request.form.get("lecture_name")
+
+        mycursor.execute(
+            """INSERT INTO `class_module` (`name`, `lecturer_name`) VALUES
+                        ('{}', '{}')""".format(
+                classmodule_name, lecture_name
+            )
+        )
+        mydb.commit()
+        return redirect(url_for("classmodule_page", res="add_success"))
+    except NameError:
+        return redirect(url_for("classmodule_page",  res="add_fail"))
+    # return redirect(url_for('home'))
+
+@app.route("/class_module_page/addstudent", methods=["POST"])
+def addstudent():
+    classmoduleId = request.form.get("classmodule-id")
+    mssv = request.form.get("mssv")
+
+    mycursor.execute(
+        """INSERT INTO `class_module_registration` (`class_module_id`, `student_id`) VALUES
+                    ('{}', '{}')""".format(
+            classmoduleId, mssv
+        )
+    )
+    mydb.commit()
+
+    return redirect(url_for("classmodule_page"))
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=5000, debug=True)
