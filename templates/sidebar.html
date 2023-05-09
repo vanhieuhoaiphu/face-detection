@@ -1,0 +1,16 @@
+<script src="{{ url_for('static', filename='js/jquery2.min.js') }}"></script>
+<div class="border-end bg-white" id="sidebar-wrapper">
+
+    <div class="sidebar-heading border-bottom bg-light">
+        <img src="{{ url_for('static', filename='img/logo.png') }}" width="22" alt="" class="d-inline-block align-middle mr-2">
+        Điểm danh sinh viên
+    </div>
+    <div class="list-group list-group-flush">
+        <a class="list-group-item list-group-item-action list-group-item-light p-3" href="/class_module" id="class-menuitem">Lớp học phần</a>
+        <a href="/student_page" class="list-group-item list-group-item-action list-group-item-light p-3" id="student-menuitem"
+           href="#!">Sinh
+            viên</a>
+        <a class="list-group-item list-group-item-action list-group-item-light p-3" href="#!" id="lecturer-menuitem">Giảng viên</a>
+        <a class="list-group-item list-group-item-action list-group-item-light p-3" href="#!" id="statistic-menuitem">Thống kê</a>
+    </div>
+</div>
