@@ -259,7 +259,6 @@ def face_recognition():  # generate frame by frame from camera
 def home():
     mycursor.execute("select mssv, sv_name, sv_class from student")
     data = mycursor.fetchall()
-
     return render_template("student_page.html", data=data)
 
 
@@ -298,8 +297,6 @@ def addprsn_submit():
     return redirect(url_for("gendataset_page", prs=mssv))
 
 
-
-
 @app.route("/vidfeed_dataset/<nbr>")
 def vidfeed_dataset(nbr):
     # Video streaming route. Put this in the src attribute of an img tag
@@ -317,8 +314,9 @@ def video_feed():
     )
 
 
-@app.route("/fr_page")
-def fr_page():
+@app.route("/fr_page/<id>")
+def fr_page(id):
+    print(id)
     """Video streaming home page."""
     mycursor.execute(
         "select a.accs_id, a.accs_prsn, b.sv_name, b.sv_class, a.accs_added "
@@ -366,33 +364,32 @@ def loadData():
 
     return jsonify(response=data)
 
+
 @app.route("/gendataset_page/<prs>")
 def gendataset_page(prs):
     return render_template("gendataset_page.html", prs=prs)
 
+
 @app.route("/add_class_module")
 def addclassmodule_page():
-    mycursor.execute(
-        "select * from class_module"
-    )
+    mycursor.execute("select * from class_module")
     data = mycursor.fetchall()
 
+    return render_template("classmodule_page.html", classmodules=data)
 
-    return render_template("classmodule_page.html", classmodules = data)
 
 @app.route("/add_class_page")
 def add_class_page():
     return render_template("add_class_page.html")
 
+
 @app.route("/class_module")
 def classmodule_page():
-    mycursor.execute(
-        "select * from class_module"
-    )
+    mycursor.execute("select * from class_module")
     data = mycursor.fetchall()
 
+    return render_template("classmodule_page.html", classmodules=data)
 
-    return render_template("classmodule_page.html", classmodules = data)
 
 @app.route("/class_module_page/add", methods=["POST"])
 def addclassmodule():
@@ -409,8 +406,9 @@ def addclassmodule():
         mydb.commit()
         return redirect(url_for("classmodule_page", res="add_success"))
     except NameError:
-        return redirect(url_for("classmodule_page",  res="add_fail"))
+        return redirect(url_for("classmodule_page", res="add_fail"))
     # return redirect(url_for('home'))
+
 
 @app.route("/class_module_page/addstudent", methods=["POST"])
 def addstudent():
@@ -426,5 +424,7 @@ def addstudent():
     mydb.commit()
 
     return redirect(url_for("classmodule_page"))
+
+
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=5000, debug=True)
