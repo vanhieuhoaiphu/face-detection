@@ -17,11 +17,9 @@ import time
 from datetime import date
 
 app = Flask(__name__)
-
 cnt = 0
 pause_cnt = 0
 justscanned = False
-
 mydb = mysql.connector.connect(
     host="localhost", user="root", passwd="", database="nhandienkhuonmat"
 )
@@ -34,82 +32,72 @@ def generate_dataset(nbr):
         "D:/DATN/face/resources/haarcascade_frontalface_default.xml"
     )
 
-    def face_cropped(img):
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        faces = face_classifier.detectMultiScale(gray, 1.3, 5)
-        # scaling factor=1.3
-        # Minimum neighbor = 5
-
-        if faces == ():
-            return None
-        for x, y, w, h in faces:
-            cropped_face = img[y : y + h, x : x + w]
-        return cropped_face
-
     cap = cv2.VideoCapture(0)
-
     mycursor.execute("select ifnull(max(img_id), 0) from img_dataset")
     row = mycursor.fetchone()
     lastid = row[0]
-
     img_id = lastid
     max_imgid = img_id + 50
     count_img = 0
 
     while True:
         ret, img = cap.read()
-        if face_cropped(img) is not None:
-            count_img += 1
-            img_id += 1
-            face = cv2.resize(face_cropped(img), (200, 200))
-            face = cv2.cvtColor(face, cv2.COLOR_BGR2GRAY)
-            file_name_path = "dataset/" + nbr + "." + str(img_id) + ".jpg"
-            cv2.imwrite(file_name_path, face)
-            cv2.putText(
-                face,
-                str(count_img),
-                (50, 50),
-                cv2.FONT_HERSHEY_COMPLEX,
-                1,
-                (0, 255, 0),
-                2,
-            )
-
-            mycursor.execute(
-                """INSERT INTO `img_dataset` (`img_id`, `img_sv`) VALUES
-                                ('{}', '{}')""".format(
-                    img_id, nbr
+        imgDetection = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        img2 = face_classifier.detectMultiScale(
+            img,
+            scaleFactor=1.1,
+            minNeighbors=5,
+            minSize=(30, 30),
+            flags=cv2.CASCADE_SCALE_IMAGE,
+        )
+        for fX, fY, fW, fH in img2:
+            if count_img < 50:
+                cv2.rectangle(img, (fX, fY), (fX + fW, fY + fH), (0, 0, 255), 2)
+                file_name_path = "dataset/" + nbr + "." + str(img_id) + ".jpg"
+                cv2.imwrite(file_name_path, imgDetection)
+                cv2.putText(
+                    img,
+                    str(count_img),
+                    (50, 50),
+                    cv2.FONT_HERSHEY_COMPLEX,
+                    1,
+                    (0, 255, 0),
+                    2,
                 )
-            )
-            mydb.commit()
+                mycursor.execute(
+                    """INSERT INTO `img_dataset` (`img_id`, `img_sv`) VALUES
+                                    ('{}', '{}')""".format(
+                        img_id, nbr
+                    )
+                )
+                mydb.commit()
+                count_img += 1
+                img_id += 1
+            else:
+                return
 
-            frame = cv2.imencode(".jpg", face)[1].tobytes()
-            yield (b"--frame\r\n" b"Content-Type: image/jpeg\r\n\r\n" + frame + b"\r\n")
-
-            if cv2.waitKey(1) == 13 or int(img_id) == int(max_imgid):
-                cap.release()
-                cv2.destroyAllWindows()
-                break
+        frame = cv2.imencode(".jpg", img)[1].tobytes()
+        yield (b"--frame\r\n" b"Content-Type: image/jpeg\r\n\r\n" + frame + b"\r\n")
+        if cv2.waitKey(1) == 13 or int(img_id) == int(max_imgid):
+            cap.release()
+            cv2.destroyAllWindows()
+            break
 
 
 # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< Train Classifier >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 @app.route("/train_classifier/<nbr>")
 def train_classifier(nbr):
     dataset_dir = "D:/DATN/face/dataset"
-
     path = [os.path.join(dataset_dir, f) for f in os.listdir(dataset_dir)]
     faces = []
     ids = []
-
     for image in path:
         img = Image.open(image).convert("L")
         imageNp = np.array(img, "uint8")
         id = int(os.path.split(image)[1].split(".")[1])
-
         faces.append(imageNp)
         ids.append(id)
     ids = np.array(ids)
-
     # Train the classifier and save
     clf = cv2.face.LBPHFaceRecognizer_create()
     clf.train(faces, ids)
@@ -236,20 +224,17 @@ def face_recognition():  # generate frame by frame from camera
     )
     clf = cv2.face.LBPHFaceRecognizer_create()
     clf.read("classifier.xml")
-
     wCam, hCam = 400, 400
-
     cap = cv2.VideoCapture(0)
     cap.set(3, wCam)
     cap.set(4, hCam)
 
     while True:
         ret, img = cap.read()
+        print("check")
         img = recognize(img, clf, faceCascade)
-
         frame = cv2.imencode(".jpg", img)[1].tobytes()
         yield (b"--frame\r\n" b"Content-Type: image/jpeg\r\n\r\n" + frame + b"\r\n\r\n")
-
         key = cv2.waitKey(1)
         if key == 27:
             break
@@ -300,7 +285,6 @@ def addprsn_submit():
 @app.route("/vidfeed_dataset/<nbr>")
 def vidfeed_dataset(nbr):
     # Video streaming route. Put this in the src attribute of an img tag
-    print(generate_dataset(nbr))
     return Response(
         generate_dataset(nbr), mimetype="multipart/x-mixed-replace; boundary=frame"
     )
@@ -316,7 +300,6 @@ def video_feed():
 
 @app.route("/fr_page/<id>")
 def fr_page(id):
-    print(id)
     """Video streaming home page."""
     mycursor.execute(
         "select a.accs_id, a.accs_prsn, b.sv_name, b.sv_class, a.accs_added "
@@ -414,7 +397,7 @@ def addclassmodule():
 def addstudent():
     classmoduleId = request.form.get("classmodule-id")
     mssv = request.form.get("mssv")
-
+    print("masv", mssv)
     mycursor.execute(
         """INSERT INTO `class_module_registration` (`class_module_id`, `student_id`) VALUES
                     ('{}', '{}')""".format(
