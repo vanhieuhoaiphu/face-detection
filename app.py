@@ -29,7 +29,7 @@ mycursor = mydb.cursor()
 # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< Generate dataset >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 def generate_dataset(nbr):
     face_classifier = cv2.CascadeClassifier(
-        "D:/DATN/face/resources/haarcascade_frontalface_default.xml"
+        "resources/haarcascade_frontalface_default.xml"
     )
 
     cap = cv2.VideoCapture(0)
@@ -87,7 +87,7 @@ def generate_dataset(nbr):
 # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< Train Classifier >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 @app.route("/train_classifier/<nbr>")
 def train_classifier(nbr):
-    dataset_dir = "D:/DATN/face/dataset"
+    dataset_dir = "dataset"
     path = [os.path.join(dataset_dir, f) for f in os.listdir(dataset_dir)]
     faces = []
     ids = []
@@ -107,7 +107,7 @@ def train_classifier(nbr):
 
 
 # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< Face Recognition >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-def face_recognition(id, classid):  # generate frame by frame from camera
+def face_recognition(idsubject, classid):  # generate frame by frame from camera
     def draw_boundary(img, classifier, scaleFactor, minNeighbors, color, text, clf):
         gray_image = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         features = classifier.detectMultiScale(gray_image, scaleFactor, minNeighbors)
@@ -168,7 +168,7 @@ def face_recognition(id, classid):  # generate frame by frame from camera
                         # + pnbr
                         # + "')"
                         "insert into accs_hist (accs_date, student_id,dateID,class_module_id) values('{}','{}','{}','{}')".format(
-                            str(date.today()), pnbr, id, classid
+                            str(date.today()), pnbr, idsubject, classid
                         )
                     )
                     mydb.commit()
@@ -222,9 +222,7 @@ def face_recognition(id, classid):  # generate frame by frame from camera
         coords = draw_boundary(img, faceCascade, 1.1, 10, (255, 255, 0), "Face", clf)
         return img
 
-    faceCascade = cv2.CascadeClassifier(
-        "D:/DATN/face/resources/haarcascade_frontalface_default.xml"
-    )
+    faceCascade = cv2.CascadeClassifier("resources/haarcascade_frontalface_default.xml")
     clf = cv2.face.LBPHFaceRecognizer_create()
     clf.read("classifier.xml")
     wCam, hCam = 400, 400
@@ -309,8 +307,6 @@ def fr_page(id, classid):
         "select a.accs_id, a.student_id, b.sv_name, b.sv_class, a.accs_added "
         "  from accs_hist a "
         "  left join student b on a.student_id = b.mssv "
-        " where a.accs_date = curdate() "
-        " order by 1 desc"
     )
     data = mycursor.fetchall()
 
@@ -341,9 +337,9 @@ def loadData():
     mycursor = mydb.cursor()
 
     mycursor.execute(
-        "select a.accs_id, a.accs_prsn, b.sv_name, b.sv_class, date_format(a.accs_added, '%H:%i:%s') "
+        "select a.accs_id, a.student_id, b.sv_name, b.sv_class, date_format(a.accs_added, '%H:%i:%s') "
         "  from accs_hist a "
-        " left join student b on a.accs_prsn = b.mssv "
+        " left join student b on a.student_id = b.mssv "
         " where a.accs_date = curdate() "
         " order by 1 desc"
     )
