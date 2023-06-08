@@ -107,7 +107,7 @@ def train_classifier(nbr):
 
 
 # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< Face Recognition >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-def face_recognition():  # generate frame by frame from camera
+def face_recognition(id, classid):  # generate frame by frame from camera
     def draw_boundary(img, classifier, scaleFactor, minNeighbors, color, text, clf):
         gray_image = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         features = classifier.detectMultiScale(gray_image, scaleFactor, minNeighbors)
@@ -162,11 +162,14 @@ def face_recognition():  # generate frame by frame from camera
                     cnt = 0
 
                     mycursor.execute(
-                        "insert into accs_hist (accs_date, accs_prsn) values('"
-                        + str(date.today())
-                        + "', '"
-                        + pnbr
-                        + "')"
+                        # "insert into accs_hist (accs_date, accs_prsn,dateID) values('"
+                        # + str(date.today())
+                        # + "', '"
+                        # + pnbr
+                        # + "')"
+                        "insert into accs_hist (accs_date, student_id,dateID,class_module_id) values('{}','{}','{}','{}')".format(
+                            str(date.today()), pnbr, id, classid
+                        )
                     )
                     mydb.commit()
 
@@ -231,7 +234,7 @@ def face_recognition():  # generate frame by frame from camera
 
     while True:
         ret, img = cap.read()
-        print("check")
+
         img = recognize(img, clf, faceCascade)
         frame = cv2.imencode(".jpg", img)[1].tobytes()
         yield (b"--frame\r\n" b"Content-Type: image/jpeg\r\n\r\n" + frame + b"\r\n\r\n")
@@ -290,27 +293,28 @@ def vidfeed_dataset(nbr):
     )
 
 
-@app.route("/video_feed")
-def video_feed():
+@app.route("/video_feed/<id>/<classid>")
+def video_feed(id, classid):
     # Video streaming route. Put this in the src attribute of an img tag
     return Response(
-        face_recognition(), mimetype="multipart/x-mixed-replace; boundary=frame"
+        face_recognition(id, classid),
+        mimetype="multipart/x-mixed-replace; boundary=frame",
     )
 
 
-@app.route("/fr_page/<id>")
-def fr_page(id):
+@app.route("/fr_page/<id>/<classid>")
+def fr_page(id, classid):
     """Video streaming home page."""
     mycursor.execute(
-        "select a.accs_id, a.accs_prsn, b.sv_name, b.sv_class, a.accs_added "
+        "select a.accs_id, a.student_id, b.sv_name, b.sv_class, a.accs_added "
         "  from accs_hist a "
-        "  left join student b on a.accs_prsn = b.mssv "
+        "  left join student b on a.student_id = b.mssv "
         " where a.accs_date = curdate() "
         " order by 1 desc"
     )
     data = mycursor.fetchall()
 
-    return render_template("fr_page.html", data=data)
+    return render_template("fr_page.html", data=data, id=id, classid=classid)
 
 
 @app.route("/countTodayScan")
@@ -393,20 +397,77 @@ def addclassmodule():
     # return redirect(url_for('home'))
 
 
-@app.route("/class_module_page/addstudent", methods=["POST"])
-def addstudent():
-    classmoduleId = request.form.get("classmodule-id")
+@app.route("/class_module_page/addstudent/<id>", methods=["POST"])
+def addstudent(id):
     mssv = request.form.get("mssv")
-    print("masv", mssv)
+    print("masv", mssv, id)
     mycursor.execute(
         """INSERT INTO `class_module_registration` (`class_module_id`, `student_id`) VALUES
                     ('{}', '{}')""".format(
-            classmoduleId, mssv
+            id, mssv
         )
     )
     mydb.commit()
+    return redirect(url_for("student_register", id=id, success=True))
 
-    return redirect(url_for("classmodule_page"))
+
+@app.route("/student_register/<id>/<success>")
+def student_register(id, success):
+    mycursor.execute(
+        "SELECT * FROM class_module_registration  LEFT JOIN student on class_module_registration.student_id=student.mssv where class_module_registration.class_module_id='{}'".format(
+            id
+        )
+    )
+    data = mycursor.fetchall()
+    print("check", success)
+    return render_template(
+        "student_register.html", students=data, id=id, success=success
+    )
+
+
+@app.route("/subject/<id>")
+def subject(id):
+    mycursor.execute("SELECT * FROM `date_module` WHERE classID='{}'".format(id))
+    data = mycursor.fetchall()
+    mycursor.execute("SELECT * FROM `class_module` ")
+    dataall = mycursor.fetchall()
+    return render_template("subject.html", subjects=data, id=id, dataall=dataall)
+
+
+@app.route("/detail/<dateid>/<id>")
+def detail(dateid, id):
+    mycursor.execute(
+        "SELECT *,student.sv_name,student.sv_class FROM accs_hist left join student on student.mssv=accs_hist.accs_prsn WHERE dateId='{}' and class_module_id='{}' ".format(
+            dateid, id
+        )
+    )
+    data = mycursor.fetchall()
+    return render_template("detail.html", students=data)
+
+
+@app.route("/remove/<idstudent>/<idclass>")
+def remove(idstudent, idclass):
+    mycursor.execute(
+        "DELETE FROM `class_module_registration` WHERE class_module_id='{}' and student_id='{}' ".format(
+            idclass, idstudent
+        )
+    )
+    data = mycursor.fetchall()
+
+    return redirect(url_for("student_register", id=idclass, success=True))
+
+
+@app.route("/addsubject", methods=["POST"])
+def addsubject():
+    subject = request.form.get("subject")
+    classid = request.form.get("classid")
+    mycursor.execute(
+        "INSERT INTO `date_module`(  `classID`, `title`) VALUES ('{}','{}') ".format(
+            classid, subject
+        )
+    )
+    mycursor.fetchall()
+    return redirect(url_for("subject", id=classid))
 
 
 if __name__ == "__main__":

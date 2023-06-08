@@ -1,15 +1,21 @@
 <script src="{{ url_for('static', filename='js/jquery2.min.js') }}"></script>
-<div class="border-end bg-white" id="sidebar-wrapper">
+<script src="https://kit.fontawesome.com/a165894a3e.js" crossorigin="anonymous"></script>
+<div class="border-end" id="sidebar-wrapper">
 
-    <div class="sidebar-heading border-bottom bg-light">
+    <div class="sidebar-heading border-bottom ">
         Điểm danh sinh viên
     </div>
     <div class="list-group list-group-flush">
-        <a class="list-group-item list-group-item-action list-group-item-light p-3" href="/class_module" id="class-menuitem">Lớp học phần</a>
-        <a href="/student_page" class="list-group-item list-group-item-action list-group-item-light p-3" id="student-menuitem"
-           href="#!">Sinh
+        <a class="list-group-item list-group-item-action list-group-item-light p-3" href="/class_module"
+            id="class-menuitem">
+            <i class="fa fa-users" aria-hidden="true"></i>Lớp học phần</a>
+        <a href="/student_page" class="list-group-item list-group-item-action list-group-item-light p-3"
+            id="student-menuitem">
+            <i class="fa fa-users" aria-hidden="true"></i>Sinh
             viên</a>
-        <a class="list-group-item list-group-item-action list-group-item-light p-3" href="#!" id="lecturer-menuitem">Giảng viên</a>
-        <a class="list-group-item list-group-item-action list-group-item-light p-3" href="#!" id="statistic-menuitem">Thống kê</a>
+        <a class="list-group-item list-group-item-action list-group-item-light p-3" id="lecturer-menuitem">
+            <i class="fa fa-address-book" aria-hidden="true"></i>Giảng viên</a>
+        <a class="list-group-item list-group-item-action list-group-item-light p-3" id="statistic-menuitem">
+            <i class="fa-solid fa-people-group"></i>Thống kê</a>
     </div>
 </div>
