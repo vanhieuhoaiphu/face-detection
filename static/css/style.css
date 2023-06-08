@@ -4,12 +4,36 @@
     background: linear-gradient(to right, #33001b, #ff0084); /* W3C, IE 10+/ Edge, Firefox 16+, Chrome 26+, Opera 12+, Safari 7+ */
 
 }
-
+*{
+    font-family: 'Inter', sans-serif;
+}
+#sidebar-wrapper, .list-group a{
+    background: #0575e6 !important;
+    color: aliceblue !important;
+}
+ .list-group a:hover{
+    color: rgb(61, 151, 230) !important;
+    background: #f5f6f7 !important;
+    border-radius: 15px !important;
+    margin: 5px 5px 5px 5px;
+    width: 85% !important;
+    height: 85% !important;
+}
+.list-group{
+    --bs-list-group-border-color:none !important;
+}
 .mt-100{
     margin-top:100px;
 }
 
-
+button{
+    outline: none;
+    text-align: center;
+}
+a{
+    outline: none;
+    text-align: center;
+}
 .divider:after,
 .divider:before {
 content: "";
