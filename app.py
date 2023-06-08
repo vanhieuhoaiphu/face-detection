@@ -103,7 +103,7 @@ def train_classifier(nbr):
     clf.train(faces, ids)
     clf.write("classifier.xml")
 
-    return redirect("/")
+    return redirect("/student_page")
 
 
 # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< Face Recognition >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
