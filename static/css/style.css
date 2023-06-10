@@ -7,6 +7,11 @@
 *{
     font-family: 'Inter', sans-serif;
 }
+input:focus, select:focus{
+    outline: none !important;
+    box-shadow: none !important;
+}
+
 #sidebar-wrapper, .list-group a{
     background: #0575e6 !important;
     color: aliceblue !important;

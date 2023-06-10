@@ -35,7 +35,7 @@ def generate_dataset(nbr):
     cap = cv2.VideoCapture(0)
     mycursor.execute("select ifnull(max(img_id), 0) from img_dataset")
     row = mycursor.fetchone()
-    lastid = row[0]
+    lastid = row[0] + 1
     img_id = lastid
     max_imgid = img_id + 50
     count_img = 0
@@ -270,17 +270,20 @@ def addprsn_submit():
     mssv = request.form.get("mssv")
     namesv = request.form.get("txtname")
     classsv = request.form.get("class")
-
-    mycursor.execute(
-        """INSERT INTO `student` (`mssv`, `sv_name`, `sv_class`) VALUES
-                    ('{}', '{}', '{}')""".format(
-            mssv, namesv, classsv
+    sql = "SELECT * FROM `student` WHERE mssv ='{}'".format(mssv)
+    mycursor.execute(sql)
+    data = mycursor.fetchall()
+    if len(data) > 0:
+        return redirect(url_for("addprsn"))
+    else:
+        mycursor.execute(
+            """INSERT INTO `student` (`mssv`, `sv_name`, `sv_class`) VALUES
+                        ('{}', '{}', '{}')""".format(
+                mssv, namesv, classsv
+            )
         )
-    )
-    mydb.commit()
-
-    # return redirect(url_for('home'))
-    return redirect(url_for("gendataset_page", prs=mssv))
+        mydb.commit()
+        return redirect(url_for("gendataset_page", prs=mssv))
 
 
 @app.route("/vidfeed_dataset/<nbr>")
@@ -307,9 +310,10 @@ def fr_page(id, classid):
         "select a.accs_id, a.student_id, b.sv_name, b.sv_class, a.accs_added "
         "  from accs_hist a "
         "  left join student b on a.student_id = b.mssv "
+        " where a.dateID='{}' and a.class_module_id='{}'".format(id, classid)
     )
     data = mycursor.fetchall()
-
+    print(data)
     return render_template("fr_page.html", data=data, id=id, classid=classid)
 
 
@@ -320,9 +324,7 @@ def countTodayScan():
     )
     mycursor = mydb.cursor()
 
-    mycursor.execute(
-        "select count(*) " "  from accs_hist " " where accs_date = curdate() "
-    )
+    mycursor.execute("select count(*) " "  from accs_hist " "")
     row = mycursor.fetchone()
     rowcount = row[0]
 
@@ -340,11 +342,11 @@ def loadData():
         "select a.accs_id, a.student_id, b.sv_name, b.sv_class, date_format(a.accs_added, '%H:%i:%s') "
         "  from accs_hist a "
         " left join student b on a.student_id = b.mssv "
-        " where a.accs_date = curdate() "
+        "  "
         " order by 1 desc"
     )
     data = mycursor.fetchall()
-
+    print(data, "2")
     return jsonify(response=data)
 
 
@@ -433,11 +435,12 @@ def subject(id):
 @app.route("/detail/<dateid>/<id>")
 def detail(dateid, id):
     mycursor.execute(
-        "SELECT *,student.sv_name,student.sv_class FROM accs_hist left join student on student.mssv=accs_hist.accs_prsn WHERE dateId='{}' and class_module_id='{}' ".format(
+        "SELECT *,student.sv_name,student.sv_class FROM accs_hist left join student on student.mssv=accs_hist.student_id WHERE dateId='{}' and class_module_id='{}' ".format(
             dateid, id
         )
     )
     data = mycursor.fetchall()
+    print("detail", data)
     return render_template("detail.html", students=data)
 
 

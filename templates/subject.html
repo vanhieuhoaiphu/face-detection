@@ -27,16 +27,15 @@
                 <div class="m-2">
                     <h3>Dữ liệu lớp học phần</h3>
                     <div class="modal-body">
-                        <form class="form-inline" action="http://127.0.0.1:5000/addsubject" method="POST">
+                        <form class="form-inline" action="http://127.0.0.1:5000/addsubject" method="POST" style="display: flex;flex-direction: row; align-items: center; ">
                             <input type="text" class="form-control mb-2 mr-sm-2" id="inlineFormInputName2"
-                                name="subject" placeholder="Nhập tiêu đề">
-                            <label for="cars">Lớp học phần:</label>
-                            <select name="classid" id="classid">
+                                name="subject" placeholder="Nhập tiêu đề" >
+                            <label for="cars" >Lớp học phần:</label>
+                            <select name="classid" id="classid" class="form-control" >
                               {% for item in dataall %}
                               <option value="{{item[0]}}">{{item[1]}} - {{item[2]}} </option>
                               {% endfor %}
                             </select>
-                            <br><br>
                             <button type="submit" class="btn btn-primary float-right mb-2">Thêm tiết</button>
                           </form>
                         <table class="table mt-2">
