@@ -42,7 +42,7 @@ def generate_dataset(nbr):
 
     while True:
         ret, img = cap.read()
-        imgDetection = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        imgDetection = img
         img2 = face_classifier.detectMultiScale(
             img,
             scaleFactor=1.1,
@@ -122,7 +122,6 @@ def face_recognition(idsubject, classid):  # generate frame by frame from camera
             if confidence > 70 and not justscanned:
                 global cnt
                 cnt += 1
-
                 n = (100 / 30) * cnt
                 # w_filled = (n / 100) * w
                 w_filled = (cnt / 30) * w
@@ -172,7 +171,8 @@ def face_recognition(idsubject, classid):  # generate frame by frame from camera
                         )
                     )
                     data = mycursor.fetchone()
-                    if len(data) == 0:
+                    print("check fce-fr ", pnbr, classid)
+                    if data == None:
                         mycursor.execute(
                             # "insert into accs_hist (accs_date, accs_prsn,dateID) values('"
                             # + str(date.today())
@@ -231,8 +231,13 @@ def face_recognition(idsubject, classid):  # generate frame by frame from camera
         return coords
 
     def recognize(img, clf, faceCascade):
-        coords = draw_boundary(img, faceCascade, 1.1, 10, (255, 255, 0), "Face", clf)
-        return img
+        try:
+            coords = draw_boundary(
+                img, faceCascade, 1.1, 10, (255, 255, 0), "Face", clf
+            )
+            return img
+        except:
+            return
 
     faceCascade = cv2.CascadeClassifier("resources/haarcascade_frontalface_default.xml")
     clf = cv2.face.LBPHFaceRecognizer_create()
