@@ -25,7 +25,7 @@
             <div class="m-2">
                 <h3>Thêm dữ liệu sinh viên {{ prs }}</h3>
                 <div class="row mt-5">
-                    <div class="col-md-3 offset-lg-2">
+                    <div class="col-md-9 offset-lg-2">
                         <img src="{{ url_for('vidfeed_dataset', nbr=prs) }}" width="100%" class="img-thumbnail">
                     </div>
                 </div>
@@ -33,7 +33,7 @@
                 <br>
                 <div class="row">
                     <div class="col-md-3 offset-lg-2">
-                        <a class="btn btn-warning btn-lg" href="{{ url_for('train_classifier', nbr=prs) }}"> Thêm </a>
+                        <a class="btn btn-primary float-right mb-2" href="{{ url_for('train_classifier', nbr=prs) }}"> Thêm </a>
                     </div>
                 </div>
             </div>

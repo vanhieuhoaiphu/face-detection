@@ -28,15 +28,31 @@
                     <h3>Dữ liệu lớp học phần</h3>
                     <div class="modal-body">
                         <form class="form-inline" action="http://127.0.0.1:5000/addsubject" method="POST" style="display: flex;flex-direction: row; align-items: center; ">
-                            <input type="text" class="form-control mb-2 mr-sm-2" id="inlineFormInputName2"
-                                name="subject" placeholder="Nhập tiêu đề" >
-                            <label for="cars" >Lớp học phần:</label>
-                            <select name="classid" id="classid" class="form-control" >
-                              {% for item in dataall %}
-                              <option value="{{item[0]}}">{{item[1]}} - {{item[2]}} </option>
-                              {% endfor %}
-                            </select>
-                            <button type="submit" class="btn btn-primary float-right mb-2">Thêm tiết</button>
+                           <div class="container-fluid">
+                            <div class="row">
+                                <div class="col-3">
+                                    <input type="text" class="form-control mb-2 mr-sm-2" id="inlineFormInputName2"
+                                    name="subject" placeholder="Nhập tiêu đề" >
+                                </div>
+                           
+                                  
+                            
+                                <div class="col-4">
+                                    <select name="classid" id="classid" class="form-control" >
+                                        {% for item in dataall %}
+                                        <option value="{{item[0]}}">{{item[1]}} - {{item[2]}} </option>
+                                        {% endfor %}
+                                      </select>
+                                </div>
+                                <div class="col-2">
+                                    <button type="submit" class="btn btn-primary float-right mb-2">Thêm tiết</button>
+                                </div>
+                            </div>
+                           </div>
+                           
+                            
+                           
+                           
                           </form>
                         <table class="table mt-2">
                             <thead class="table-dark">

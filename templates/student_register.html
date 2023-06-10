@@ -31,10 +31,24 @@
                     <h3>Dữ liệu lớp học phần</h3>
                     <div class="modal-body">
                         <form class="form-inline" action="http://127.0.0.1:5000/class_module_page/addstudent/{{id}}" method="POST">
-                        
-                            <input type="text" class="form-control mb-2 mr-sm-2" id="inlineFormInputName2"
-                                name="mssv" placeholder="Nhập mã sinh viên">
-                            <button type="submit" class="btn btn-primary float-right mb-2">Thêm vào lớp</button>
+                            <div class="container-fluid">
+                                <div class="row">
+                                    <div class="m-2 col-2 ">
+                                        <select name="mssv" id="mssv" class="form-control" >
+                                            {% for item in dataall %}
+                                            <option value="{{item[0]}}">{{item[1]}} - {{item[2]}} </option>
+                                            {% endfor %}
+                                          </select>
+                                    </div>
+                                    <div class="m-2 col-2 ">
+                                        <button type="submit" class="btn btn-primary float-right mb-2">Thêm vào lớp</button>
+                                    </div>
+                                </div>
+                                
+                             
+                            </div>
+                               
+                            
                         </form>
                      
                         <table class="table mt-2">

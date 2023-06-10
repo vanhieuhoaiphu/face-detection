@@ -167,11 +167,23 @@ def face_recognition(idsubject, classid):  # generate frame by frame from camera
                         # + "', '"
                         # + pnbr
                         # + "')"
-                        "insert into accs_hist (accs_date, student_id,dateID,class_module_id) values('{}','{}','{}','{}')".format(
-                            str(date.today()), pnbr, idsubject, classid
+                        "SELECT * FROM `accs_hist` WHERE  student_id='{}' and class_module_id='{}'".format(
+                            pnbr, classid
                         )
                     )
-                    mydb.commit()
+                    data = mycursor.fetchone()
+                    if len(data) == 0:
+                        mycursor.execute(
+                            # "insert into accs_hist (accs_date, accs_prsn,dateID) values('"
+                            # + str(date.today())
+                            # + "', '"
+                            # + pnbr
+                            # + "')"
+                            "insert into accs_hist (accs_date, student_id,dateID,class_module_id) values('{}','{}','{}','{}')".format(
+                                str(date.today()), pnbr, idsubject, classid
+                            )
+                        )
+                        mydb.commit()
 
                     cv2.putText(
                         img,
@@ -313,26 +325,30 @@ def fr_page(id, classid):
         " where a.dateID='{}' and a.class_module_id='{}'".format(id, classid)
     )
     data = mycursor.fetchall()
-    print(data)
+
     return render_template("fr_page.html", data=data, id=id, classid=classid)
 
 
-@app.route("/countTodayScan")
-def countTodayScan():
+@app.route("/countTodayScan/<id>/<classid>")
+def countTodayScan(id, classid):
     mydb = mysql.connector.connect(
         host="localhost", user="root", passwd="", database="nhandienkhuonmat"
     )
     mycursor = mydb.cursor()
 
-    mycursor.execute("select count(*) " "  from accs_hist " "")
+    mycursor.execute(
+        "select count(*)  from accs_hist where dateID ='{}' and class_module_id='{}' ".format(
+            id, classid
+        )
+    )
     row = mycursor.fetchone()
     rowcount = row[0]
 
     return jsonify({"rowcount": rowcount})
 
 
-@app.route("/loadData", methods=["GET", "POST"])
-def loadData():
+@app.route("/loadData/<id>/<classid>", methods=["GET", "POST"])
+def loadData(id, classid):
     mydb = mysql.connector.connect(
         host="localhost", user="root", passwd="", database="nhandienkhuonmat"
     )
@@ -342,8 +358,8 @@ def loadData():
         "select a.accs_id, a.student_id, b.sv_name, b.sv_class, date_format(a.accs_added, '%H:%i:%s') "
         "  from accs_hist a "
         " left join student b on a.student_id = b.mssv "
-        "  "
-        " order by 1 desc"
+        " where a.dateID ='{}' and a.class_module_id='{}' "
+        " order by 1 desc".format(id, classid)
     )
     data = mycursor.fetchall()
     print(data, "2")
@@ -417,9 +433,16 @@ def student_register(id, success):
         )
     )
     data = mycursor.fetchall()
-    print("check", success)
+
+    mycursor.execute(
+        "SELECT * FROM `student` WHERE mssv not in('{}')".format(
+            "','".join(x[2] for x in data)
+        )
+    )
+    print(",".join(x[2] for x in data))
+    dataall = mycursor.fetchall()
     return render_template(
-        "student_register.html", students=data, id=id, success=success
+        "student_register.html", students=data, id=id, success=success, dataall=dataall
     )
 
 

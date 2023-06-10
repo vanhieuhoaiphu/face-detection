@@ -44,7 +44,7 @@
  
         function countTodayScan() {
             $.ajax({
-                url: '/countTodayScan',
+                url: '/countTodayScan/{{id}}/{{classid}}',
                 type: 'GET',
                 dataType: 'json',
                 success: function(data) {
@@ -63,7 +63,7 @@
  
         function reloadTable() {
             $.ajax({
-                url: '/loadData',
+                url: '/loadData/{{id}}/{{classid}}',
                 type: 'GET',
                 dataType: 'json',
                 success: function(response){
