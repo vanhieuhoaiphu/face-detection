@@ -51,7 +51,7 @@ def generate_dataset(nbr):
             flags=cv2.CASCADE_SCALE_IMAGE,
         )
         for fX, fY, fW, fH in img2:
-            if count_img < 50:
+            if count_img < 150:
                 cv2.rectangle(img, (fX, fY), (fX + fW, fY + fH), (0, 0, 255), 2)
                 file_name_path = "dataset/" + nbr + "." + str(img_id) + ".jpg"
                 cv2.imwrite(file_name_path, imgDetection)
@@ -159,31 +159,26 @@ def face_recognition(idsubject, classid):  # generate frame by frame from camera
 
                 if int(cnt) == 30:
                     cnt = 0
-
                     mycursor.execute(
-                        # "insert into accs_hist (accs_date, accs_prsn,dateID) values('"
-                        # + str(date.today())
-                        # + "', '"
-                        # + pnbr
-                        # + "')"
                         "SELECT * FROM `accs_hist` WHERE  student_id='{}' and class_module_id='{}'".format(
                             pnbr, classid
                         )
                     )
                     data = mycursor.fetchone()
-                    print("check fce-fr ", pnbr, classid)
                     if data == None:
                         mycursor.execute(
-                            # "insert into accs_hist (accs_date, accs_prsn,dateID) values('"
-                            # + str(date.today())
-                            # + "', '"
-                            # + pnbr
-                            # + "')"
-                            "insert into accs_hist (accs_date, student_id,dateID,class_module_id) values('{}','{}','{}','{}')".format(
-                                str(date.today()), pnbr, idsubject, classid
+                            "SELECT * FROM `class_module_registration` WHERE student_id='{}' and class_module_id='{}'".format(
+                                pnbr, classid
                             )
                         )
-                        mydb.commit()
+                        data = mycursor.fetchone()
+                        if data != None:
+                            mycursor.execute(
+                                "insert into accs_hist (accs_date, student_id,dateID,class_module_id) values('{}','{}','{}','{}')".format(
+                                    str(date.today()), pnbr, idsubject, classid
+                                )
+                            )
+                            mydb.commit()
 
                     cv2.putText(
                         img,
@@ -196,7 +191,6 @@ def face_recognition(idsubject, classid):  # generate frame by frame from camera
                         cv2.LINE_AA,
                     )
                     time.sleep(1)
-
                     justscanned = True
                     pause_cnt = 0
 
@@ -325,6 +319,7 @@ def fr_page(id, classid):
     """Video streaming home page."""
     mycursor.execute(
         "select a.accs_id, a.student_id, b.sv_name, b.sv_class, a.accs_added "
+        ""
         "  from accs_hist a "
         "  left join student b on a.student_id = b.mssv "
         " where a.dateID='{}' and a.class_module_id='{}'".format(id, classid)
@@ -391,9 +386,11 @@ def add_class_page():
 
 @app.route("/class_module")
 def classmodule_page():
-    mycursor.execute("select * from class_module")
+    mycursor.execute(
+        "select *,(SELECT count(id) from class_module_registration where class_module_registration.class_module_id= class_module.id) from class_module"
+    )
     data = mycursor.fetchall()
-
+    print(data)
     return render_template("classmodule_page.html", classmodules=data)
 
 
