@@ -37,12 +37,12 @@ def generate_dataset(nbr):
     row = mycursor.fetchone()
     lastid = row[0] + 1
     img_id = lastid
-    max_imgid = img_id + 50
+    max_imgid = img_id + 150
     count_img = 0
 
     while True:
         ret, img = cap.read()
-        imgDetection = img
+        imgDetection = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         img2 = face_classifier.detectMultiScale(
             img,
             scaleFactor=1.1,
@@ -52,9 +52,9 @@ def generate_dataset(nbr):
         )
         for fX, fY, fW, fH in img2:
             if count_img < 150:
-                cv2.rectangle(img, (fX, fY), (fX + fW, fY + fH), (0, 0, 255), 2)
                 file_name_path = "dataset/" + nbr + "." + str(img_id) + ".jpg"
                 cv2.imwrite(file_name_path, imgDetection)
+                cv2.rectangle(img, (fX, fY), (fX + fW, fY + fH), (0, 0, 255), 2)
                 cv2.putText(
                     img,
                     str(count_img),
@@ -156,12 +156,12 @@ def face_recognition(idsubject, classid):  # generate frame by frame from camera
                 pnbr = row[0]
                 pname = row[1]
                 pskill = row[2]
-
+                print(pnbr)
                 if int(cnt) == 30:
                     cnt = 0
                     mycursor.execute(
-                        "SELECT * FROM `accs_hist` WHERE  student_id='{}' and class_module_id='{}'".format(
-                            pnbr, classid
+                        "SELECT * FROM `accs_hist` WHERE  student_id='{}' and class_module_id='{}' and dateID='{}'".format(
+                            pnbr, classid, idsubject
                         )
                     )
                     data = mycursor.fetchone()
