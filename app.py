@@ -2,7 +2,6 @@ from flask import (
     Flask,
     render_template,
     request,
-    session,
     redirect,
     url_for,
     Response,
@@ -13,8 +12,17 @@ import cv2
 from PIL import Image
 import numpy as np
 import os
+from keras.utils.image_utils import img_to_array
 import time
 from datetime import date
+from keras.models import load_model
+import tensorflow
+from preprocessing import (
+    simpledatasetloader,
+    simplepreprocessor,
+    imagetoarraypreprocessor,
+)
+import threading
 
 app = Flask(__name__)
 cnt = 0
@@ -31,20 +39,23 @@ def generate_dataset(nbr):
     face_classifier = cv2.CascadeClassifier(
         "resources/haarcascade_frontalface_default.xml"
     )
+    import histogram
 
     cap = cv2.VideoCapture(0)
-    mycursor.execute("select ifnull(max(img_id), 0) from img_dataset")
-    row = mycursor.fetchone()
-    lastid = row[0] + 1
+    lastid = 0
     img_id = lastid
     max_imgid = img_id + 150
     count_img = 0
-
+    try:
+        path = os.path.join("dataset", nbr)
+        os.mkdir(path)
+    except:
+        pass
     while True:
         ret, img = cap.read()
-        imgDetection = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        imgGray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         img2 = face_classifier.detectMultiScale(
-            img,
+            imgGray,
             scaleFactor=1.1,
             minNeighbors=5,
             minSize=(30, 30),
@@ -52,8 +63,17 @@ def generate_dataset(nbr):
         )
         for fX, fY, fW, fH in img2:
             if count_img < 150:
-                file_name_path = "dataset/" + nbr + "." + str(img_id) + ".jpg"
-                cv2.imwrite(file_name_path, imgDetection)
+                file_name_path = (
+                    "dataset/{}/".format(nbr) + nbr + "." + str(img_id) + ".jpg"
+                )
+                cv2.imwrite(
+                    file_name_path,
+                    imgGray[fY - 10 : fY + fH + 10, fX - 10 : fX + fW + 10],
+                )
+                t1 = threading.Thread(target=histogram.histopogram, args=(nbr, img_id))
+                t1.start()
+                t1.join()
+
                 cv2.rectangle(img, (fX, fY), (fX + fW, fY + fH), (0, 0, 255), 2)
                 cv2.putText(
                     img,
@@ -64,13 +84,6 @@ def generate_dataset(nbr):
                     (0, 255, 0),
                     2,
                 )
-                mycursor.execute(
-                    """INSERT INTO `img_dataset` (`img_id`, `img_sv`) VALUES
-                                    ('{}', '{}')""".format(
-                        img_id, nbr
-                    )
-                )
-                mydb.commit()
                 count_img += 1
                 img_id += 1
             else:
@@ -87,166 +100,88 @@ def generate_dataset(nbr):
 # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< Train Classifier >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 @app.route("/train_classifier/<nbr>")
 def train_classifier(nbr):
-    dataset_dir = "dataset"
-    path = [os.path.join(dataset_dir, f) for f in os.listdir(dataset_dir)]
-    faces = []
-    ids = []
-    for image in path:
-        img = Image.open(image).convert("L")
-        imageNp = np.array(img, "uint8")
-        id = int(os.path.split(image)[1].split(".")[1])
-        faces.append(imageNp)
-        ids.append(id)
-    ids = np.array(ids)
-    # Train the classifier and save
-    clf = cv2.face.LBPHFaceRecognizer_create()
-    clf.train(faces, ids)
-    clf.write("classifier.xml")
+    from Train_minivggnet import trainModel
 
+    trainModel()
     return redirect("/student_page")
 
 
 # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< Face Recognition >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 def face_recognition(idsubject, classid):  # generate frame by frame from camera
-    def draw_boundary(img, classifier, scaleFactor, minNeighbors, color, text, clf):
-        gray_image = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        features = classifier.detectMultiScale(gray_image, scaleFactor, minNeighbors)
-        global justscanned
-        global pause_cnt
-        pause_cnt += 1
-        coords = []
-        for x, y, w, h in features:
-            cv2.rectangle(img, (x, y), (x + w, y + h), color, 2)
-            id, pred = clf.predict(gray_image[y : y + h, x : x + w])
-            confidence = int(100 * (1 - pred / 300))
-            if confidence > 70 and not justscanned:
-                global cnt
-                cnt += 1
-                n = (100 / 30) * cnt
-                # w_filled = (n / 100) * w
-                w_filled = (cnt / 30) * w
-
-                cv2.putText(
-                    img,
-                    str(int(n)) + " %",
-                    (x + 20, y + h + 28),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.8,
-                    (153, 255, 255),
-                    2,
-                    cv2.LINE_AA,
-                )
-
-                cv2.rectangle(img, (x, y + h + 40), (x + w, y + h + 50), color, 2)
-                cv2.rectangle(
-                    img,
-                    (x, y + h + 40),
-                    (x + int(w_filled), y + h + 50),
-                    (153, 255, 255),
-                    cv2.FILLED,
-                )
-
-                mycursor.execute(
-                    "select a.img_sv, b.sv_name, b.sv_class "
-                    "  from img_dataset a "
-                    "  left join student b on a.img_sv = b.mssv "
-                    " where img_id = " + str(id)
-                )
-                row = mycursor.fetchone()
-                pnbr = row[0]
-                pname = row[1]
-                pskill = row[2]
-                print(pnbr)
-                if int(cnt) == 30:
-                    cnt = 0
-                    mycursor.execute(
-                        "SELECT * FROM `accs_hist` WHERE  student_id='{}' and class_module_id='{}' and dateID='{}'".format(
-                            pnbr, classid, idsubject
-                        )
-                    )
-                    data = mycursor.fetchone()
-                    if data == None:
-                        mycursor.execute(
-                            "SELECT * FROM `class_module_registration` WHERE student_id='{}' and class_module_id='{}'".format(
-                                pnbr, classid
-                            )
-                        )
-                        data = mycursor.fetchone()
-                        if data != None:
-                            mycursor.execute(
-                                "insert into accs_hist (accs_date, student_id,dateID,class_module_id) values('{}','{}','{}','{}')".format(
-                                    str(date.today()), pnbr, idsubject, classid
-                                )
-                            )
-                            mydb.commit()
-
-                    cv2.putText(
-                        img,
-                        pname + " | " + pskill,
-                        (x - 10, y - 10),
-                        cv2.FONT_HERSHEY_SIMPLEX,
-                        0.8,
-                        (153, 255, 255),
-                        2,
-                        cv2.LINE_AA,
-                    )
-                    time.sleep(1)
-                    justscanned = True
-                    pause_cnt = 0
-
-            else:
-                if not justscanned:
-                    cv2.putText(
-                        img,
-                        "UNKNOWN",
-                        (x, y - 5),
-                        cv2.FONT_HERSHEY_SIMPLEX,
-                        0.8,
-                        (0, 0, 255),
-                        2,
-                        cv2.LINE_AA,
-                    )
-                else:
-                    cv2.putText(
-                        img,
-                        " ",
-                        (x, y - 5),
-                        cv2.FONT_HERSHEY_SIMPLEX,
-                        0.8,
-                        (0, 0, 255),
-                        2,
-                        cv2.LINE_AA,
-                    )
-
-                if pause_cnt > 80:
-                    justscanned = False
-
-            coords = [x, y, w, h]
-        return coords
-
-    def recognize(img, clf, faceCascade):
-        try:
-            coords = draw_boundary(
-                img, faceCascade, 1.1, 10, (255, 255, 0), "Face", clf
+    def draw_boundary(idstudent):
+        mycursor.execute(
+            "SELECT * FROM `accs_hist` WHERE  student_id='{}' and class_module_id='{}'".format(
+                id, classid
             )
-            return img
-        except:
-            return
+        )
+        data = mycursor.fetchone()
+        if data == None:
+            mycursor.execute(
+                "SELECT * FROM `class_module_registration` WHERE student_id='{}' and class_module_id='{}'".format(
+                    idstudent, classid
+                )
+            )
+            data = mycursor.fetchone()
+            if data != None:
+                mycursor.execute(
+                    "insert into accs_hist (accs_date, student_id,dateID,class_module_id) values('{}','{}','{}','{}')".format(
+                        str(date.today()), idstudent, idsubject, classid
+                    )
+                )
+                mydb.commit()
+
+        # cv2.putText(
+        #     img,
+        #     "pname" + " | " + "pskill",
+        #     (x - 10, y - 10),
+        #     cv2.FONT_HERSHEY_SIMPLEX,
+        #     0.8,
+        #     (153, 255, 255),
+        #     2,
+        #     cv2.LINE_AA,
+        # )
+        # time.sleep(1)
+
+    # coords = [x, y, w, h]
 
     faceCascade = cv2.CascadeClassifier("resources/haarcascade_frontalface_default.xml")
-    clf = cv2.face.LBPHFaceRecognizer_create()
-    clf.read("classifier.xml")
     wCam, hCam = 400, 400
     cap = cv2.VideoCapture(0)
     cap.set(3, wCam)
     cap.set(4, hCam)
-
+    d = "dataset"
+    classLabels = list(
+        filter(lambda x: os.path.isdir(os.path.join(d, x)), os.listdir(d))
+    )
+    model = load_model("miniVGGNet.hdf5")
+    sp = simplepreprocessor.SimplePreprocessor(
+        32, 32
+    )  # Thiết lập kích thước ảnh 32 x 32
+    iap = imagetoarraypreprocessor.ImageToArrayPreprocessor()
+    sdl = simpledatasetloader.SimpleDatasetLoader(preprocessors=[sp, iap])
+    imagePaths = ["LoadImage\\check.jpg"]
     while True:
         ret, img = cap.read()
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        features = faceCascade.detectMultiScale(
+            img,
+            scaleFactor=1.1,
+            minNeighbors=5,
+            minSize=(30, 30),
+            flags=cv2.CASCADE_SCALE_IMAGE,
+        )
 
-        img = recognize(img, clf, faceCascade)
+        for x, y, w, h in features:
+            roi = gray[y : y + h, x : x + w]
+            cv2.imwrite("LoadImage/check.jpg", roi)
+            (data, labels) = sdl.load(imagePaths)
+            data = data.astype("float") / 255.0
+            draw_boundary(classLabels[np.argmax(model.predict(data))])
+            cv2.rectangle(img, (x, y), (x + w, y + h), (255, 255, 0), 2)
+
         frame = cv2.imencode(".jpg", img)[1].tobytes()
         yield (b"--frame\r\n" b"Content-Type: image/jpeg\r\n\r\n" + frame + b"\r\n\r\n")
+
         key = cv2.waitKey(1)
         if key == 27:
             break
@@ -390,7 +325,7 @@ def classmodule_page():
         "select *,(SELECT count(id) from class_module_registration where class_module_registration.class_module_id= class_module.id) from class_module"
     )
     data = mycursor.fetchall()
-    print(data)
+
     return render_template("classmodule_page.html", classmodules=data)
 
 
